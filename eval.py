@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Live API evaluation: independently verify inventory, structural hard constraints and ranked relevance."""
+"""Compare original word-match and hybrid search against the same 20 judged requests and live inventory."""
 import json
 import math
 import os
@@ -10,129 +10,185 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 ROOT = Path(__file__).resolve().parent
-BASE = os.environ['SEARCH_URL'].rstrip('/')
-INVENTORY = os.getenv('INVENTORY_URL', 'http://localhost:4010').rstrip('/')
-CATALOG = {v['id']: v for v in json.loads((ROOT / 'data/listings.json').read_text())}
-PLACES = {v['id']: v for v in json.loads((ROOT / 'data/places.json').read_text())}
+SEARCH = os.environ["SEARCH_URL"].rstrip("/")
+BASELINE = os.getenv("BASELINE_URL", "").rstrip("/")
+INVENTORY = os.getenv("INVENTORY_URL", "http://localhost:4010").rstrip("/")
+CATALOG = {v["id"]: v for v in json.loads((ROOT / "data/listings.json").read_text())}
+PLACES = {v["id"]: v for v in json.loads((ROOT / "data/places.json").read_text())}
 
 
 def get_json(url, data=None, headers=None):
     payload = json.dumps(data).encode() if data is not None else None
-    req = Request(url, data=payload, headers=headers or {}, method='POST' if payload else 'GET')
+    req = Request(url, data=payload, headers=headers or {}, method="POST" if payload else "GET")
     with urlopen(req, timeout=5) as response:
         return json.load(response)
 
 
 def distance_miles(a, b):
     rad = math.pi / 180
-    dlat, dlon = (b['lat'] - a['lat']) * rad, (b['lng'] - a['lng']) * rad
-    x = math.sin(dlat / 2)**2 + math.cos(a['lat'] * rad) * math.cos(b['lat'] * rad) * math.sin(dlon / 2)**2
-    return 3958.8 * 2 * math.atan2(math.sqrt(x), math.sqrt(1 - x))
+    dlat, dlon = (b["lat"] - a["lat"]) * rad, (b["lng"] - a["lng"]) * rad
+    x = math.sin(dlat / 2)**2 + math.cos(a["lat"] * rad) * math.cos(b["lat"] * rad) * math.sin(dlon / 2)**2
+    return 3958.8 * 2 * math.atan2(math.sqrt(x), math.sqrt(max(0, 1 - x)))
 
 
 def obeys_structure(listing, parsed, tenant):
-    if listing['visibility'] not in ('public', f'private:{tenant}'):
+    if listing["visibility"] not in ("public", f"private:{tenant}"):
         return False
-    if parsed.get('guests') is not None and listing['sleeps'] < parsed['guests']:
+    if parsed.get("guests") is not None and listing["sleeps"] < parsed["guests"]:
         return False
-    if parsed.get('bedrooms') is not None and listing['bedrooms'] < parsed['bedrooms']:
+    if parsed.get("bedrooms") is not None and listing["bedrooms"] < parsed["bedrooms"]:
         return False
-    if parsed.get('pets') and not listing['pets_allowed']:
+    if parsed.get("pets") and not listing["pets_allowed"]:
         return False
-    if parsed.get('place_ids'):
-        if parsed.get('radius_miles') is not None and parsed.get('place'):
-            center = next((p for p in PLACES.values() if p['name'] == parsed['place']), None)
-            if center and distance_miles(center, listing) > parsed['radius_miles'] + 0.01:
+    if parsed.get("place_ids"):
+        if parsed.get("radius_miles") is not None and parsed.get("place"):
+            center = next((p for p in PLACES.values() if p["name"] == parsed["place"]), None)
+            if center and distance_miles(center, listing) > parsed["radius_miles"] + 0.01:
                 return False
-        elif listing['place_id'] not in parsed['place_ids']:
+        elif listing["place_id"] not in parsed["place_ids"]:
             return False
-    if parsed.get('budget') is not None and parsed.get('budget_currency') and listing['currency'] != parsed['budget_currency']:
+    if parsed.get("budget") is not None and parsed.get("budget_currency") and listing["currency"] != parsed["budget_currency"]:
         return False
     return True
 
 
-def quotes(ids, parsed):
+def live_quotes(ids, parsed):
     answer = {}
     for i in range(0, len(ids), 50):
-        query = urlencode({'ids': ','.join(ids[i:i+50]), 'check_in': parsed['check_in'], 'check_out': parsed['check_out']})
-        for r in get_json(f'{INVENTORY}/v1/availability?{query}')['results']:
-            answer[r['listing_id']] = r
+        query = urlencode({
+            "ids": ",".join(ids[i:i+50]),
+            "check_in": parsed["check_in"],
+            "check_out": parsed["check_out"],
+        })
+        for result in get_json(f"{INVENTORY}/v1/availability?{query}")["results"]:
+            answer[result["listing_id"]] = result
     return answer
 
 
-def available_and_affordable(listing, quote, parsed):
-    if not quote or not quote['available'] or quote['currency'] != listing['currency']:
+def eligible(listing, quote, parsed):
+    if not quote or not quote["available"] or quote["currency"] != listing["currency"]:
         return False
-    if parsed.get('budget') is not None:
-        amount = quote['total'] if parsed.get('budget_basis') == 'total' else quote['nightly_avg']
-        if amount is None or amount > parsed['budget']:
+    if parsed.get("budget") is not None:
+        value = quote["total"] if parsed.get("budget_basis") == "total" else quote["nightly_avg"]
+        if value is None or value > parsed["budget"]:
             return False
     return True
 
 
-def ndcg(actual, grades):
-    def dcg(items):
-        return sum((2**grade - 1) / math.log2(rank + 2) for rank, grade in enumerate(items))
+def ndcg(ids, grades):
+    def dcg(values):
+        return sum((2 ** grade - 1) / math.log2(rank + 2) for rank, grade in enumerate(values))
     ideal = dcg(sorted(grades.values(), reverse=True)[:10])
-    return dcg([grades.get(x, 0) for x in actual[:10]]) / ideal if ideal else 1.0
+    return dcg([grades.get(key, 0) for key in ids[:10]]) / ideal if ideal else 1.0
+
+
+def run_search(url, case):
+    start = time.perf_counter()
+    result = get_json(f"{url}/v1/search", {"q": case["q"], "limit": 10}, {
+        "content-type": "application/json", "x-tenant": case["tenant"], "x-now": case["now"]
+    })
+    return result, (time.perf_counter() - start) * 1000
+
+
+class Measurements:
+    def __init__(self, label):
+        self.label = label
+        self.recalls = []
+        self.ndcgs = []
+        self.latencies = []
+        self.hard_pass = 0
+        self.hard_total = 0
+        self.live_pass = 0
+        self.live_total = 0
+        self.tenant_leaks = 0
+        self.zero_pass = 0
+        self.errors = 0
+
+    def record(self, case, response, latency, parsed, reference, grades):
+        output = response["results"]
+        ids = [item["listing_id"] for item in output]
+        if len(ids) > 10 or len(ids) != len(set(ids)):
+            self.errors += 1
+        self.latencies.append(latency)
+        self.recalls.append(len(set(ids) & grades.keys()) / len(grades) if grades else 1.0)
+        self.ndcgs.append(ndcg(ids, grades))
+        if case.get("expect_empty"):
+            self.zero_pass += int(not ids)
+        for item in output:
+            self.hard_total += 1
+            listing = CATALOG.get(item["listing_id"])
+            quote = reference.get(item["listing_id"])
+            if listing and listing["visibility"] not in ("public", f"private:{case['tenant']}"):
+                self.tenant_leaks += 1
+            if listing and obeys_structure(listing, parsed, case["tenant"]) and eligible(listing, quote, parsed):
+                self.hard_pass += 1
+            self.live_total += 1
+            if quote and all((
+                item["currency"] == quote["currency"],
+                item["total"] == quote["total"],
+                item["nightly_avg"] == quote["nightly_avg"],
+            )):
+                self.live_pass += 1
+        return len(ids)
+
+    def summary(self):
+        latencies = sorted(self.latencies)
+        p95 = latencies[math.ceil(len(latencies) * 0.95) - 1] if latencies else 0
+        recall = statistics.mean(self.recalls) if self.recalls else 0
+        ranking = statistics.mean(self.ndcgs) if self.ndcgs else 0
+        zero = self.zero_pass
+        print(f"\n--- {self.label} ---")
+        print(f"completed={len(latencies)} errors={self.errors} mean_recall@10={recall:.3f} mean_ndcg@10={ranking:.3f}")
+        print(f"hard_constraint_pass={self.hard_pass}/{self.hard_total} live_quote_match={self.live_pass}/{self.live_total} unauthorized_private_stays={self.tenant_leaks} impossible_query_empty={zero}/1")
+        print(f"p50_latency_ms={statistics.median(latencies) if latencies else 0:.1f} p95_latency_ms={p95:.1f} under_300ms={sum(x < 300 for x in latencies)}/{len(latencies)}")
+        return {"recall": recall, "ndcg": ranking, "hard_pass": self.hard_pass,
+                "hard_total": self.hard_total, "live_pass": self.live_pass,
+                "live_total": self.live_total, "p95": p95}
 
 
 def main():
-    cases = [json.loads(line) for line in (ROOT / 'eval/queries.jsonl').read_text().splitlines() if line.strip()]
-    assert len(cases) == 20, f'Expected 20 queries, found {len(cases)}'
-    recalls, ndcgs, latencies = [], [], []
-    hard_pass = 0
-    hard_total = 0
-    quote_pass = 0
-    quote_total = 0
-    zero_pass = 0
-    errors = 0
+    cases = [json.loads(line) for line in (ROOT / "eval/queries.jsonl").read_text().splitlines() if line.strip()]
+    assert len(cases) == 20, f"Expected 20 queries, found {len(cases)}"
+    before = Measurements("BEFORE: original word-match (initial commit be0a955)")
+    after = Measurements("AFTER: hybrid search + live inventory")
+
     for case in cases:
-        started = time.perf_counter()
         try:
-            result = get_json(f'{BASE}/v1/search', {'q': case['q'], 'limit': 10},
-                              {'content-type': 'application/json', 'x-tenant': case['tenant'], 'x-now': case['now']})
-            latency = (time.perf_counter() - started) * 1000
-            latencies.append(latency)
-            parsed = result['understood']
-            output = result['results']
-            ids = [r['listing_id'] for r in output]
-            if len(ids) != len(set(ids)) or len(ids) > 10:
-                errors += 1
-            relevant = list(case['judgments'])
-            reference = quotes(list(set(ids + relevant)), parsed) if ids or relevant else {}
-            valid_grades = {
-                lid: grade for lid, grade in case['judgments'].items()
-                if lid in CATALOG and obeys_structure(CATALOG[lid], parsed, case['tenant'])
-                and available_and_affordable(CATALOG[lid], reference.get(lid), parsed)
+            new, new_latency = run_search(SEARCH, case)
+            old, old_latency = run_search(BASELINE, case) if BASELINE else (None, 0)
+            # Both are assessed against the hybrid parser's disclosed intent, NOT the
+            # original's unstructured 'words' output. This ensures the same hard rules.
+            parsed = new["understood"]
+            all_ids = set(case["judgments"]) | {x["listing_id"] for x in new["results"]}
+            if old:
+                all_ids.update(x["listing_id"] for x in old["results"])
+            reference = live_quotes(sorted(all_ids), parsed) if all_ids else {}
+            grades = {
+                lid: grade for lid, grade in case["judgments"].items()
+                if lid in CATALOG and obeys_structure(CATALOG[lid], parsed, case["tenant"])
+                and eligible(CATALOG[lid], reference.get(lid), parsed)
             }
-            for item in output:
-                hard_total += 1
-                listing = CATALOG.get(item['listing_id'])
-                quote = reference.get(item['listing_id'])
-                if listing and obeys_structure(listing, parsed, case['tenant']) and available_and_affordable(listing, quote, parsed):
-                    hard_pass += 1
-                quote_total += 1
-                if quote and item['currency'] == quote['currency'] and item['total'] == quote['total'] and item['nightly_avg'] == quote['nightly_avg']:
-                    quote_pass += 1
-            recall = len(set(ids[:10]) & set(valid_grades)) / len(valid_grades) if valid_grades else 1.0
-            rank_score = ndcg(ids, valid_grades)
-            recalls.append(recall)
-            ndcgs.append(rank_score)
-            if case.get('expect_empty'):
-                zero_pass += int(len(ids) == 0)
-            print(f"{case['id']:<31} R@10={recall:.2f} nDCG@10={rank_score:.2f} results={len(ids):2} latency={latency:.0f}ms")
+            new_count = after.record(case, new, new_latency, parsed, reference, grades)
+            if old:
+                old_count = before.record(case, old, old_latency, parsed, reference, grades)
+                print(f"{case['id']:<31} BEFORE R@10={before.recalls[-1]:.2f} nDCG={before.ndcgs[-1]:.2f} n={old_count:2} | AFTER R@10={after.recalls[-1]:.2f} nDCG={after.ndcgs[-1]:.2f} n={new_count:2}")
+            else:
+                print(f"{case['id']:<31} R@10={after.recalls[-1]:.2f} nDCG@10={after.ndcgs[-1]:.2f} results={new_count:2} latency={new_latency:.0f}ms")
         except Exception as exc:
-            errors += 1
+            after.errors += 1
+            if BASELINE:
+                before.errors += 1
             print(f"{case['id']:<31} ERROR {type(exc).__name__}: {exc}")
-    latencies.sort()
-    p95 = latencies[math.ceil(0.95 * len(latencies)) - 1] if latencies else 0
-    print('\n--- SUMMARY (independent live inventory checks) ---')
-    print(f"queries={len(cases)} completed={len(latencies)} errors={errors}")
-    print(f"mean_recall@10={statistics.mean(recalls) if recalls else 0:.3f} mean_ndcg@10={statistics.mean(ndcgs) if ndcgs else 0:.3f}")
-    print(f"hard_constraint_pass={hard_pass}/{hard_total} live_quote_match={quote_pass}/{quote_total} impossible_query_empty={zero_pass}/1")
-    print(f"p50_latency_ms={statistics.median(latencies) if latencies else 0:.1f} p95_latency_ms={p95:.1f} under_300ms={sum(x < 300 for x in latencies)}/{len(latencies)}")
+
+    print("\n--- SAME 20 QUERIES, SAME LABELS, SAME LIVE INVENTORY ---")
+    if BASELINE:
+        b = before.summary()
+    a = after.summary()
+    if BASELINE:
+        print(f"\nDELTA recall@10={a['recall'] - b['recall']:+.3f} nDCG@10={a['ndcg'] - b['ndcg']:+.3f} "
+              f"(p95 cost={a['p95'] - b['p95']:+.1f}ms).")
+        print("Caveat: baseline serves stale prices without checking live inventory, so its faster latency is not equivalent work.")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

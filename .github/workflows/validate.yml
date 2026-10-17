@@ -10,25 +10,38 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-      - name: Install and compile
+      - name: Install and compile hybrid search
         run: bash setup.sh
-      - name: Start inventory and search
+      - name: Build actual initial-commit word-match baseline
+        run: |
+          git worktree add --detach ../hearthly-original be0a955d606858c7df66e660f76887fbbba4d50b
+          ln -s "$PWD/node_modules" ../hearthly-original/node_modules
+          (cd ../hearthly-original && ./node_modules/.bin/tsc -p tsconfig.json)
+      - name: Start inventory, original baseline and hybrid search
         run: |
           node tools/inventory-dev.mjs > inventory.log 2>&1 &
           PORT=3000 INVENTORY_URL=http://127.0.0.1:4010 node dist/main.js > search.log 2>&1 &
+          PORT=3001 INVENTORY_URL=http://127.0.0.1:4010 node ../hearthly-original/dist/main.js > baseline.log 2>&1 &
           for i in $(seq 1 40); do
-            if curl --fail --silent http://127.0.0.1:3000/health >/dev/null; then exit 0; fi
+            if curl --fail --silent http://127.0.0.1:3000/health >/dev/null &&
+               curl --fail --silent http://127.0.0.1:3001/health >/dev/null &&
+               curl --fail --silent http://127.0.0.1:4010/health >/dev/null; then
+              exit 0
+            fi
             sleep 1
           done
-          cat search.log
+          cat search.log baseline.log inventory.log
           exit 1
-      - name: Evaluation and contract smoke test
+      - name: Evaluate before and after against same live inventory
         env:
           SEARCH_URL: http://127.0.0.1:3000
+          BASELINE_URL: http://127.0.0.1:3001
           INVENTORY_URL: http://127.0.0.1:4010
         run: |
           bash eval.sh | tee evaluation.log
@@ -49,3 +62,14 @@ jobs:
           assert search('a cabin in Asheville for 40 guests under $100 total, October 2-4','hearthly')['results'] == []
           print('Contract, weekend dates, privacy and no-results smoke checks passed')
           PY
+      - name: Preserve evaluation output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: before-after-evaluation
+          path: |
+            evaluation.log
+            search.log
+            baseline.log
+            inventory.log
+          if-no-files-found: ignore
