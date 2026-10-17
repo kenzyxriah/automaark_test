@@ -17,13 +17,31 @@ Partner isolation is a server-side requirement: only `visibility=public` or `vis
 - Guest capacity, explicit bedroom minimum, and requests *bringing* pets are hard constraints. Cabin/cottage/etc., amenities and vibes determine **rank order**. The supplied inventory exposes one `pets_allowed` boolean, not per-animal policies or pet surcharges.
 - When a query has no available matches, return `{results: []}`. A future UI can offer opt-in relaxations; the search API never silently relaxes hard conditions.
 
-## Evaluation
+## Evaluation — measured original versus hybrid
 
-Run `npm run inventory` and `npm run dev` in two terminals, then `SEARCH_URL=http://localhost:3000 INVENTORY_URL=http://localhost:4010 bash eval.sh`. `eval/queries.jsonl` has **20 human-interpretable graded examples** (0–3, with highest grades for matching the requested type + features) spanning mountain towns, coastal stays, Lagos, Accra, pet/capacity constraints, budgets, private partner access and an intentional zero-result query.
+The evaluator in `eval.py` makes actual HTTP requests to two independent API processes:
+- Before: the unmodified starter code from initial commit `be0a955d`, compiled and served on port 3001.
+- After: the current hybrid search, served on port 3000.
 
-`eval.py` calls the **real search endpoint** and independently calls **live inventory** for returned and judged IDs. It computes live-eligible Recall@10 and nDCG@10, the proportion of actual results obeying structural hard constraints, exact match of response vs live quote prices, empty-result correctness, p50/p95 API latency and rate of searches below 300ms. Relevance labels are intentionally static; unavailable judged stays are omitted from the ideal ranking at evaluation time. Live availability changes with the grading seed: metrics should be rerun against that seed.
+Both execute the exact same **20 manually graded** queries from `eval/queries.jsonl`, with the same tenant and `x-now` headers, the same graded relevance labels, and the same live inventory server and seed. The authoritative query interpretation comes from the hybrid parser, because the original word matcher does not parse constraints; the evaluator independently checks **both** result sets against those same rules and live quotes. Relevance judgments for unavailable or unaffordable stays are excluded from both ideal rankings for that query.
 
-**Baseline** (provided starter): word matching only on titles, stale `price_hint`, no guest/geo/pet/date/tenant eligibility, no live inventory or meaningful ranking evaluation. **After**: explicit hard-rule gates, hybrid ranking, authoritative price/availability and an executable offline evaluation. Quantitative scores come from `eval.sh` at runtime; do not invent baseline or after numbers for runs not executed.
+| Metric (20 queries, CI dev inventory seed) | Before: original word match | After: hybrid |
+|---|---:|---:|
+| Mean Recall@10 | 0.333 | 0.975 |
+| Mean nDCG@10 | 0.296 | 0.925 |
+| Hard-rule + live-eligibility pass | 13/200 (6.5%) | 174/174 (100%) |
+| Exactly matches live quote totals and nightly averages | 0/200 | 174/174 |
+| Private stays exposed to unauthorized tenant | 5 | 0 |
+| Correctly empty impossible-query response | 0/1 | 1/1 |
+| p50 API latency | 2.0 ms | 43.3 ms |
+| p95 API latency | 3.4 ms | 75.7 ms |
+| Searches under 300 ms | 20/20 | 20/20 |
+
+Result: +0.642 mean Recall@10 and ~+0.630 mean nDCG@10. The baseline is much faster because it returns stale hints and makes **no** live inventory calls, not because it performs equivalent search work. Likewise, a zero live-quote-match count reflects that the baseline response has null totals and stale nightly price hints. The new pipeline does the extra work required by the product contract.
+
+These are **local lab evaluation numbers**, not an estimate of production conversion or a guarantee under different inventory seeds. Evaluations use a small, hand-curated label set, and Recall@10 is defined only over the available, eligible judged IDs rather than all conceivable relevant stays. Re-run for different `INVENTORY_SEED` settings and add an independent held-out annotation set before drawing broader conclusions.
+
+Reproduce under GitHub Actions: `.github/workflows/validate.yml` builds the original Git commit and new code, runs both services plus a shared live inventory, then runs `bash eval.sh` with `BASELINE_URL` and `SEARCH_URL` set; evaluation output is uploaded as a workflow artifact. For the grading environment, `bash eval.sh` also works without `BASELINE_URL`, evaluating the running new search alone. Last verified run: https://github.com/kenzyxriah/automaark_test/actions/runs/39058399144
 
 ## Where vectors deliberately do not apply
 
