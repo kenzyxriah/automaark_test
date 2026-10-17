@@ -1,1 +1,20 @@
-{"id": "example-1", "tenant": "hearthly", "now": "2026-09-14", "q": "a cabin near Asheville for four of us and the dog, first weekend of October, under $250", "judgments": {"L0001": 0}}
+{"id":"asheville-pet-cabin","tenant":"hearthly","now":"2026-09-14","q":"a cabin near Asheville for four of us and the dog, first weekend of October, under $250","judgments":{"L0061":3,"L0017":3,"L0049":3,"L0007":3,"L0008":2}}
+{"id":"asheville-creek-cottage","tenant":"hearthly","now":"2026-09-14","q":"romantic cottage in Asheville for 2 with a creek, October 2-4","judgments":{"L0051":3,"L0073":3,"L0057":3,"L0002":2}}
+{"id":"boone-mountain-cabin","tenant":"hearthly","now":"2026-09-14","q":"quiet mountain view cabin in Boone for two, next weekend","judgments":{"L0150":3,"L0146":3,"L0142":3,"L0143":2}}
+{"id":"gatlinburg-hottub","tenant":"hearthly","now":"2026-09-14","q":"log cabin in Gatlinburg for 2 with a hot tub, first weekend of October","judgments":{"L0201":3,"L0169":2,"L0185":2}}
+{"id":"blue-ridge-lake","tenant":"hearthly","now":"2026-09-14","q":"lake access cabin in Blue Ridge for 6 people, October 9-11","judgments":{"L0267":3,"L0270":3,"L0261":3,"L0263":3}}
+{"id":"brevard-mountain","tenant":"hearthly","now":"2026-09-14","q":"charming cottage with mountain view in Brevard for two, this weekend","judgments":{"L0121":3,"L0128":2,"L0127":2}}
+{"id":"savannah-pets","tenant":"hearthly","now":"2026-09-14","q":"a house in Savannah for four guests and our dog with beach access, October 2-4","judgments":{"L0311":3,"L0285":3,"L0301":2}}
+{"id":"tybee-beach","tenant":"savannah-co","now":"2026-09-14","q":"a beach cottage on Tybee Island for a couple, second weekend of October","judgments":{"L0320":3,"L0328":3,"L0324":2,"L0333":2}}
+{"id":"pigeon-forge-family","tenant":"hearthly","now":"2026-09-14","q":"family lodge with a pool in Pigeon Forge for six guests, October 16-18","judgments":{"L0243":3,"L0216":2,"L0225":1}}
+{"id":"asheville-work","tenant":"hearthly","now":"2026-09-14","q":"quiet Asheville place to work remotely with workspace and wifi for two, October 2-4","judgments":{"L0052":3,"L0001":3,"L0003":3,"L0033":1}}
+{"id":"asheville-accessible","tenant":"hearthly","now":"2026-09-14","q":"step-free accessible house in Asheville for two, first weekend of October","judgments":{"L0048":3,"L0058":3,"L0003":1}}
+{"id":"smokies-dog-fireplace","tenant":"hearthly","now":"2026-09-14","q":"pet-friendly cabin with fireplace in Gatlinburg for 4, October 2-4","judgments":{"L0199":2,"L0206":2,"L0194":3,"L0210":3}}
+{"id":"impossible-group","tenant":"hearthly","now":"2026-09-14","q":"a cabin in Asheville for 40 guests and the dog, October 2-4, under $100 total","judgments":{},"expect_empty":true}
+{"id":"blue-ridge-aframe","tenant":"hearthly","now":"2026-09-14","q":"a-frame mountain getaway in Blue Ridge for two, October 9-11","judgments":{"L0260":3,"L0250":3,"L0253":3,"L0256":2}}
+{"id":"lekki-generator","tenant":"lagos-keys","now":"2026-09-14","q":"modern apartment in Lekki with generator for two people, first weekend of October under ₦150000","judgments":{"L0370":3,"L0362":3,"L0355":3,"L0345":3}}
+{"id":"ikoyi-workspace","tenant":"lagos-keys","now":"2026-09-14","q":"serviced apartment in Ikoyi with a workspace for 2 adults, this weekend","judgments":{"L0374":3,"L0393":2,"L0384":2}}
+{"id":"victoria-island-security","tenant":"hearthly","now":"2026-09-14","q":"secure apartment in Victoria Island with security for 2, October 2-4","judgments":{"L0395":3,"L0412":3,"L0398":3,"L0401":3,"L0400":3}}
+{"id":"osu-apartment","tenant":"hearthly","now":"2026-09-14","q":"bright apartment in Osu Accra for two with wifi, October 2-4","judgments":{"L0419":3,"L0428":3,"L0430":3,"L0416":3}}
+{"id":"east-legon-family","tenant":"hearthly","now":"2026-09-14","q":"family villa with a pool in East Legon for four guests, October 9-11","judgments":{"L0439":3,"L0431":2,"L0433":2,"L0441":2}}
+{"id":"ridgeline-partner-private","tenant":"ridgeline","now":"2026-09-14","q":"secluded log cabin near Gatlinburg for four and a dog, first weekend of October","judgments":{"L0171":3,"L0175":3,"L0182":3,"L0199":2,"L0206":2}}
