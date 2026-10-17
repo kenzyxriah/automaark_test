@@ -1,0 +1,184 @@
+[
+ {
+  "id": "asheville",
+  "name": "Asheville",
+  "region": "North Carolina",
+  "country": "US",
+  "lat": 35.5951,
+  "lng": -82.5515,
+  "aliases": [
+   "AVL",
+   "Asheville NC"
+  ],
+  "currency": "USD",
+  "type": "town"
+ },
+ {
+  "id": "black-mountain",
+  "name": "Black Mountain",
+  "region": "North Carolina",
+  "country": "US",
+  "lat": 35.6179,
+  "lng": -82.3212,
+  "aliases": [],
+  "currency": "USD",
+  "type": "town"
+ },
+ {
+  "id": "weaverville",
+  "name": "Weaverville",
+  "region": "North Carolina",
+  "country": "US",
+  "lat": 35.6971,
+  "lng": -82.5607,
+  "aliases": [],
+  "currency": "USD",
+  "type": "town"
+ },
+ {
+  "id": "brevard",
+  "name": "Brevard",
+  "region": "North Carolina",
+  "country": "US",
+  "lat": 35.2334,
+  "lng": -82.7343,
+  "aliases": [],
+  "currency": "USD",
+  "type": "town"
+ },
+ {
+  "id": "boone",
+  "name": "Boone",
+  "region": "North Carolina",
+  "country": "US",
+  "lat": 36.2168,
+  "lng": -81.6746,
+  "aliases": [],
+  "currency": "USD",
+  "type": "town"
+ },
+ {
+  "id": "gatlinburg",
+  "name": "Gatlinburg",
+  "region": "Tennessee",
+  "country": "US",
+  "lat": 35.7143,
+  "lng": -83.5102,
+  "aliases": [
+   "the Smokies",
+   "Smoky Mountains",
+   "Great Smoky Mountains"
+  ],
+  "currency": "USD",
+  "type": "town"
+ },
+ {
+  "id": "pigeon-forge",
+  "name": "Pigeon Forge",
+  "region": "Tennessee",
+  "country": "US",
+  "lat": 35.7884,
+  "lng": -83.5543,
+  "aliases": [],
+  "currency": "USD",
+  "type": "town"
+ },
+ {
+  "id": "blue-ridge",
+  "name": "Blue Ridge",
+  "region": "Georgia",
+  "country": "US",
+  "lat": 34.864,
+  "lng": -84.3241,
+  "aliases": [
+   "Blue Ridge GA"
+  ],
+  "currency": "USD",
+  "type": "town"
+ },
+ {
+  "id": "savannah",
+  "name": "Savannah",
+  "region": "Georgia",
+  "country": "US",
+  "lat": 32.0809,
+  "lng": -81.0912,
+  "aliases": [],
+  "currency": "USD",
+  "type": "town"
+ },
+ {
+  "id": "tybee-island",
+  "name": "Tybee Island",
+  "region": "Georgia",
+  "country": "US",
+  "lat": 32.0002,
+  "lng": -80.8456,
+  "aliases": [
+   "Tybee"
+  ],
+  "currency": "USD",
+  "type": "town"
+ },
+ {
+  "id": "lekki",
+  "name": "Lekki",
+  "region": "Lagos",
+  "country": "NG",
+  "lat": 6.4698,
+  "lng": 3.5852,
+  "aliases": [
+   "Lekki Phase 1"
+  ],
+  "currency": "NGN",
+  "type": "neighbourhood"
+ },
+ {
+  "id": "ikoyi",
+  "name": "Ikoyi",
+  "region": "Lagos",
+  "country": "NG",
+  "lat": 6.4541,
+  "lng": 3.4316,
+  "aliases": [],
+  "currency": "NGN",
+  "type": "neighbourhood"
+ },
+ {
+  "id": "victoria-island",
+  "name": "Victoria Island",
+  "region": "Lagos",
+  "country": "NG",
+  "lat": 6.4281,
+  "lng": 3.4219,
+  "aliases": [
+   "VI"
+  ],
+  "currency": "NGN",
+  "type": "neighbourhood"
+ },
+ {
+  "id": "osu",
+  "name": "Osu",
+  "region": "Accra",
+  "country": "GH",
+  "lat": 5.556,
+  "lng": -0.182,
+  "aliases": [
+   "Osu Accra"
+  ],
+  "currency": "GHS",
+  "type": "neighbourhood"
+ },
+ {
+  "id": "east-legon",
+  "name": "East Legon",
+  "region": "Accra",
+  "country": "GH",
+  "lat": 5.635,
+  "lng": -0.15,
+  "aliases": [],
+  "currency": "GHS",
+  "type": "neighbourhood"
+ }
+]

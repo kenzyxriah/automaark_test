@@ -1,0 +1,24 @@
+{
+  "name": "hearthly-search",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Hearthly search: the AI Systems Lab starter",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/main.js",
+    "dev": "tsc -p tsconfig.json && node dist/main.js",
+    "inventory": "node tools/inventory-dev.mjs"
+  },
+  "dependencies": {
+    "@nestjs/common": "11.1.6",
+    "@nestjs/core": "11.1.6",
+    "@nestjs/platform-express": "11.1.6",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "7.8.2"
+  },
+  "devDependencies": {
+    "@types/express": "5.0.3",
+    "@types/node": "22.10.2",
+    "typescript": "5.6.3"
+  }
+}
