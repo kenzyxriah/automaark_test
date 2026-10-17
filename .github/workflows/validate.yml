@@ -1,0 +1,51 @@
+name: Validate Hearthly search
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-and-evaluate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install and compile
+        run: bash setup.sh
+      - name: Start inventory and search
+        run: |
+          node tools/inventory-dev.mjs > inventory.log 2>&1 &
+          PORT=3000 INVENTORY_URL=http://127.0.0.1:4010 node dist/main.js > search.log 2>&1 &
+          for i in $(seq 1 40); do
+            if curl --fail --silent http://127.0.0.1:3000/health >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat search.log
+          exit 1
+      - name: Evaluation and contract smoke test
+        env:
+          SEARCH_URL: http://127.0.0.1:3000
+          INVENTORY_URL: http://127.0.0.1:4010
+        run: |
+          bash eval.sh | tee evaluation.log
+          python3 - <<'PY'
+          import json, urllib.request
+          def search(q, tenant):
+              req = urllib.request.Request('http://127.0.0.1:3000/v1/search',
+                  data=json.dumps({'q':q}).encode(),
+                  headers={'content-type':'application/json','x-tenant':tenant,'x-now':'2026-09-14'})
+              return json.load(urllib.request.urlopen(req))
+          q = 'cabin in Gatlinburg for two, first weekend of October'
+          public = search(q,'hearthly')
+          partner = search(q,'ridgeline')
+          assert all(r['listing_id'] not in {'L0171','L0175','L0182'} for r in public['results'])
+          assert public['understood']['check_in'] == '2026-10-02'
+          assert public['understood']['check_out'] == '2026-10-04'
+          assert all(r['nightly_avg'] is not None and r['total'] is not None for r in partner['results'])
+          assert search('a cabin in Asheville for 40 guests under $100 total, October 2-4','hearthly')['results'] == []
+          print('Contract, weekend dates, privacy and no-results smoke checks passed')
+          PY
